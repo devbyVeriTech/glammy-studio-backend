@@ -109,10 +109,14 @@ async function loadGenerationImages(generationId: string) {
 /**
  * Submit an AI generation job. Returns immediately with the generation id;
  * processing continues in the background (poll via GET /ai/generation/:id).
+ *
+ * `waitUntil` keeps the job alive after the response is sent on serverless
+ * runtimes (e.g. Vercel). When absent, the job runs fire-and-forget.
  */
 export async function submitGeneration(
 	user: AuthUser,
-	input: SubmitGenerationInput
+	input: SubmitGenerationInput,
+	waitUntil?: (promise: Promise<unknown>) => void
 ): Promise<GenerationSummary> {
 	const count = Math.min(Math.max(input.count ?? 1, 1), 4);
 
@@ -164,8 +168,8 @@ export async function submitGeneration(
 		status: 'processing'
 	});
 
-	// Fire-and-forget: runs to completion in the background.
-	void runGeneration(
+	// Keep the job alive after the response on serverless, otherwise fire-and-forget.
+	const runPromise = runGeneration(
 		generationId,
 		user,
 		input,
@@ -174,6 +178,11 @@ export async function submitGeneration(
 		sourceExtension,
 		count
 	);
+	if (waitUntil) {
+		waitUntil(runPromise);
+	} else {
+		void runPromise;
+	}
 
 	return summarize(generationId, 'processing', []);
 }

@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { waitUntil } from '@vercel/functions';
 import { z } from 'zod';
 
 import { requireUser } from '$lib/server/auth';
@@ -17,13 +18,18 @@ const generateSchema = z.object({
 
 const generateRateLimiter = createRateLimiter(5, 60 * 1000);
 
+// Vercel Hobby serverless cap; raise via config/plan for longer generations.
+export const config = {
+	maxDuration: 60
+};
+
 export async function POST({ request, locals }) {
 	try {
 		const user = requireUser(locals);
 		await generateRateLimiter.check('ai', user.id);
 
 		const input = parseWithSchema(generateSchema, await request.json());
-		const generation = await submitGeneration(user, input);
+		const generation = await submitGeneration(user, input, waitUntil);
 
 		return json(
 			{
