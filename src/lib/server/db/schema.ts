@@ -28,6 +28,8 @@ export const projects = pgTable(
 		status: text('status').notNull().default('active'),
 		coverImageId: text('cover_image_id').references(() => images.id, { onDelete: 'set null' }),
 		promptId: text('prompt_id').references(() => prompts.id, { onDelete: 'set null' }),
+		category: text('category'),
+		sourceImages: text('source_images'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true })
 			.notNull()
